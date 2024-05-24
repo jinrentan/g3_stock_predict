@@ -8,7 +8,7 @@ import seaborn as sns
 from stock_analysis import load_data, calculate_indicators, plot_stock, get_stock_list
 from kaggle.api.kaggle_api_extended import KaggleApi
 
-launch = false
+launch = False
 
 def download_dataset():
     global launch
@@ -24,7 +24,7 @@ def download_dataset():
 
     # Download the dataset
     api.dataset_download_files(dataset, path=path, unzip=True)
-    launch = true
+    launch = True
 
 # Load data
 
