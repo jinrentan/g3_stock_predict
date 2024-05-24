@@ -8,7 +8,12 @@ import seaborn as sns
 from stock_analysis import load_data, calculate_indicators, plot_stock, get_stock_list
 
 # Load data
+
+if st.sidebar.button('Get Data', type="primary"):
+    download_dataset()
+
 directory = "dataset/Stocks"
+
 combined_df = load_data(directory)
 combined_df = calculate_indicators(combined_df)
 
