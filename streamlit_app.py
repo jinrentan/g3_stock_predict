@@ -6,6 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from stock_analysis import load_data, calculate_indicators, plot_stock, get_stock_list
+import os
 # from kaggle.api.kaggle_api_extended import KaggleApi
 
 # launch = False
@@ -46,7 +47,15 @@ stock_list = get_stock_list(combined_df)
 selected_stock = st.sidebar.selectbox('Stock', stock_list)
 
 # Filter data for selected stock
-stock_df = combined_df[combined_df['SourceFile'] == selected_stock]
+# stock_df = combined_df[combined_df['SourceFile'] == selected_stock]
+def load_stock_data(stock_name, directory="dataset/Stocks"):
+    file_path = os.path.join(directory, f"{stock_name}")
+    stock_df = pd.read_csv(file_path)
+    stock_df['Date'] = pd.to_datetime(stock_df['Date'])
+    stock_df = calculate_indicators(stock_df)
+    return stock_df
+
+stock_df = load_stock_data(selected_stock)
 
 # Display plots
 st.header(f'{selected_stock} Stock Analysis')

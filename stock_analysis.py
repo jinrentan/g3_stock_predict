@@ -78,6 +78,8 @@ def plot_stock(df, stock_name):
 def get_stock_list(df):
     return df['SourceFile'].unique()
 
+
+
 if __name__ == "__main__":
     directory = "content/Stocks"
     combined_df = load_data(directory)
