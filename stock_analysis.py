@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+
 # Function to load data
 def load_data(directory):
     dataframes = []
@@ -54,34 +58,76 @@ def compute_rsi(series, window=14):
     return rsi
 
 # Function to plot stock prices and indicators
-def plot_stock(df, stock_name):
-    plt.figure(figsize=(14, 7))
-    plt.subplot(2, 1, 1)
-    plt.plot(df['Date'], df['Close'], label='Close Price')
-    plt.plot(df['Date'], df['MA50'], label='50-Day MA')
-    plt.plot(df['Date'], df['MA200'], label='200-Day MA')
-    plt.title(f'{stock_name} Stock Price and Moving Averages')
-    plt.xlabel('Date')
-    plt.ylabel('Price')
-    plt.legend()
+# def plot_stock(df, stock_name):
+#     plt.figure(figsize=(14, 7))
+#     plt.subplot(2, 1, 1)
+#     plt.plot(df['Date'], df['Close'], label='Close Price')
+#     plt.plot(df['Date'], df['MA50'], label='50-Day MA')
+#     plt.plot(df['Date'], df['MA200'], label='200-Day MA')
+#     plt.title(f'{stock_name} Stock Price and Moving Averages')
+#     plt.xlabel('Date')
+#     plt.ylabel('Price')
+#     plt.legend()
 
-    plt.subplot(2, 1, 2)
-    sns.lineplot(data=df, x='Date', y='RSI')
-    plt.axhline(30, linestyle='--', alpha=0.5, color='red')
-    plt.axhline(70, linestyle='--', alpha=0.5, color='green')
-    plt.title(f'{stock_name} RSI Over Time')
-    plt.xlabel('Date')
-    plt.ylabel('RSI')
-    plt.show()
+#     plt.subplot(2, 1, 2)
+#     sns.lineplot(data=df, x='Date', y='RSI')
+#     plt.axhline(30, linestyle='--', alpha=0.5, color='red')
+#     plt.axhline(70, linestyle='--', alpha=0.5, color='green')
+#     plt.title(f'{stock_name} RSI Over Time')
+#     plt.xlabel('Date')
+#     plt.ylabel('RSI')
+#     plt.show()
 
 # Function to get list of available stocks
 def get_stock_list(df):
     return df['SourceFile'].unique()
 
+def predict(df):
+    df.dropna(inplace=True)
+    df = df.drop(columns=['SourceFile'])
+    df['Date'] = pd.to_datetime(df['Date'])  # Ensure the 'Date' column is datetime type
+    df.set_index('Date', inplace=True)  # Set 'Date' as the index
 
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaled_data = scaler.fit_transform(df['Close'].values.reshape(-1, 1))
+
+    seq_length = 60  # Use 60 days of historical data to predict the next day's price
+
+    def create_sequences(data, seq_length):
+        sequences = []
+        for i in range(len(data) - seq_length):
+            sequences.append(data[i:i + seq_length])
+        return np.array(sequences)
+
+    sequences = create_sequences(scaled_data, seq_length)
+
+    train_size = int(len(sequences) * 0.8)
+    train_sequences = sequences[:train_size]
+    test_sequences = sequences[train_size:]
+
+    # Split sequences into input and target
+    X_train = train_sequences[:, :-1]
+    y_train = train_sequences[:, -1]
+    X_test = test_sequences[:, :-1]
+    y_test = test_sequences[:, -1]
+
+    model = Sequential()
+    model.add(LSTM(50, return_sequences=True, input_shape=(seq_length-1, 1)))
+    model.add(LSTM(50))
+    model.add(Dense(1))
+
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+
+    model.fit(X_train, y_train, epochs=20, batch_size=32)
+    predicted_prices = model.predict(X_test)
+    predicted_prices = scaler.inverse_transform(predicted_prices)
+
+    return model, scaler, y_train, predicted_prices
 
 if __name__ == "__main__":
     directory = "content/Stocks"
     combined_df = load_data(directory)
     combined_df = calculate_indicators(combined_df)
-    plot_stock(combined_df[combined_df['SourceFile'] == 'googl.us.txt'], 'GOOGL')
+
+    
+    # plot_stock(combined_df[combined_df['SourceFile'] == 'googl.us.txt'], 'GOOGL')
