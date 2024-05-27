@@ -82,6 +82,48 @@ def compute_rsi(series, window=14):
 def get_stock_list(df):
     return df['SourceFile'].unique()
 
+# def predict(df):
+#     df.dropna(inplace=True)
+#     df = df.drop(columns=['SourceFile'])
+#     df['Date'] = pd.to_datetime(df['Date'])  # Ensure the 'Date' column is datetime type
+#     df.set_index('Date', inplace=True)  # Set 'Date' as the index
+
+#     scaler = MinMaxScaler(feature_range=(0, 1))
+#     scaled_data = scaler.fit_transform(df['Close'].values.reshape(-1, 1))
+
+#     seq_length = 60  # Use 60 days of historical data to predict the next day's price
+
+#     def create_sequences(data, seq_length):
+#         sequences = []
+#         for i in range(len(data) - seq_length):
+#             sequences.append(data[i:i + seq_length])
+#         return np.array(sequences)
+
+#     sequences = create_sequences(scaled_data, seq_length)
+
+#     train_size = int(len(sequences) * 0.8)
+#     train_sequences = sequences[:train_size]
+#     test_sequences = sequences[train_size:]
+
+#     # Split sequences into input and target
+#     X_train = train_sequences[:, :-1]
+#     y_train = train_sequences[:, -1]
+#     X_test = test_sequences[:, :-1]
+#     y_test = test_sequences[:, -1]
+
+#     model = Sequential()
+#     model.add(LSTM(50, return_sequences=True, input_shape=(seq_length-1, 1)))
+#     model.add(LSTM(50))
+#     model.add(Dense(1))
+
+#     model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+
+#     model.fit(X_train, y_train, epochs=20, batch_size=32)
+#     predicted_prices = model.predict(X_test)
+#     predicted_prices = scaler.inverse_transform(predicted_prices)
+
+#     return model, scaler, y_train, predicted_prices
+
 def predict(df):
     df.dropna(inplace=True)
     df = df.drop(columns=['SourceFile'])
@@ -122,7 +164,14 @@ def predict(df):
     predicted_prices = model.predict(X_test)
     predicted_prices = scaler.inverse_transform(predicted_prices)
 
-    return model, scaler, y_train, predicted_prices
+    y_train_inverse = scaler.inverse_transform(y_train.reshape(-1, 1))
+
+    # Extract the actual dates for plotting
+    train_dates = df.index[:len(y_train)]
+    test_dates = df.index[len(y_train):len(y_train) + len(predicted_prices)]
+
+    return model, scaler, y_train_inverse, predicted_prices, train_dates, test_dates
+
 
 if __name__ == "__main__":
     directory = "content/Stocks"
